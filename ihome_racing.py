@@ -6,6 +6,7 @@ import time
 import irsdk
 import paho.mqtt.client as mqtt
 import yaml
+from pathlib import Path
 import json
 
 
@@ -13,38 +14,43 @@ import json
 class Car:
     """Class for engine data."""
 
-    rpm: float
-    speed: float
-    fuel_percent: float
-    gear: int
+    rpm: float = 0
+    speed: float = 0
+    fuel_percent: float = 0
+    gear: int = 0
 
-    def state(self) -> str:
-        return "onTrack"
-
-    def attributes(self) -> str:
+    def sensors(self) -> dict:
         data = {'rpm': int(self.rpm), 'speed': int(
-            self.speed*3.6), "fuel_percent": 100-round(self.fuel_percent, 1), "gear": int(self.gear)}
-        return json.dumps(data)
+            self.speed*3.6), "fuel_percent": round(self.fuel_percent*100, 1), "gear": int(self.gear)}
+        return data
 
 
 @ dataclass
 class Session:
     """Class for session data"""
 
-    event_type: str
-    current_session_type: str
-    session_laps_total: int
-    lap_completed: int
-    player_car_class_position: int
+    event_type: str = None
+    current_session_type: str = None
+    session_laps_total: int = None
+    lap_completed: int = None
+    player_car_class_position: int = None
+
+    def sensors(self) -> dict:
+        data = {'event_type': self.event_type, 'current_session_type': self.current_session_type,
+                "session_laps_total": self.session_laps_total, "lap_completed": self.lap_completed,
+                "player_car_class_position": self.player_car_class_position
+                }
+        return data
 
 
-@ dataclass
 class Track:
     """Class for session data"""
 
-    name: str
-    latitude: float
-    longitude: float
+    def __init__(self, name="Bikuben 7", latitude=None, longitude=None):
+        config = get_config()
+        self.name: str = name
+        self.latitude: str = config["home"]["lat"] if latitude is None else latitude
+        self.longitude: str = config["home"]["lon"]if longitude is None else longitude
 
     def state(self) -> str:
         data = {'name': self.name}
@@ -55,17 +61,21 @@ class Track:
                 'longitude': self.longitude.replace('m', '').strip()}
         return json.dumps(data)
 
+    # def reset(self) -> None:
+    #     config = get_config()
+    #     self.latitude = config["home"]["lat"]
+    #     self.longitude = config["home"]["lon"]
+
 
 class MQTT:
     def __init__(self, config):
-        self.ir_connected = False
-        self.tick = 0
-        self.mqttConnected = False
-        self.base_topic = config["mqtt"]["baseTopic"]
+        self.config = config
+        self.connected = False
+        self.base_topic = self.config["mqtt"]["baseTopic"]
         self.client = mqtt.Client("irClient")
         self.client.username_pw_set(
-            config["homeassistant"]["username"],
-            config["homeassistant"]["password"]
+            self.config["homeassistant"]["username"],
+            self.config["homeassistant"]["password"]
         )
         self.mqttRC = [
             "Connection successful",
@@ -79,22 +89,22 @@ class MQTT:
         self.client.on_disconnect = self.on_disconnect
         self.client.loop_start()
         try:
-            self.client.connect(config["mqtt"]["host"],
-                                int(config["mqtt"]["port"]))
+            self.client.connect(self.config["mqtt"]["host"],
+                                int(self.config["mqtt"]["port"]))
             self.birth()
-        except Exception:
-            logger.error("unable to connect to mqtt broker")
+        except Exception as e:
+            logger.error(e)
 
-    def publish(self, topic_part: str, data: str):
+    def publish(self, topic_part: str, data: str) -> None:
         topic = self.base_topic + topic_part
         self.client.publish(topic, data)
         logger.debug(f"mqtt_publish({topic}/{data})")
 
-    def birth(self):
+    def birth(self) -> None:
         topic = "homeassistant/status"
         self.client.publish(topic, "online")
 
-    def will(self):
+    def will(self) -> None:
         topic = "homeassistant/status"
         self.client.publish(topic, "offline")
     # Paho MQTT callback
@@ -102,23 +112,21 @@ class MQTT:
     def on_connect(self, client, userdata, flags, rc):
         logger.info("MQTT: " + self.mqttRC[rc])
         if rc == 0:
-            self.mqttConnected = True
-            if self.ir_connected:
-                self.publish("state", 1)
+            self.connected = True
         else:
             logger.error("Bad connection Returned code=", rc)
 
     # Paho MQTT callback
     def on_disconnect(self, client, userdata, rc):
-        self.mqttConnected = False
+        self.connected = False
         if rc == 0:
             logger.info("MQTT: connection terminated")
         else:
             logger.error("MQTT: connection terminated unexpectedly")
 
 
-def get_config():
-    config_file = "config.yaml"
+def get_config() -> dict:
+    config_file = Path("C:/01_Dev/01_Python/iRacing/iHomeRacing/config.yaml")
     with open(config_file, 'r') as stream:
         try:
             config = yaml.safe_load(stream)
@@ -153,7 +161,7 @@ def setup_logger():
         },
         "loggers": {
             __name__: {
-                "level": "DEBUG",
+                "level": "INFO",
                 "handlers": ["console", "file"],
                 "propagate": False,
             },
@@ -170,7 +178,7 @@ def iracing_running(ir: irsdk.IRSDK) -> bool:
     return is_startup and ir.is_initialized and ir.is_connected
 
 
-def send_telemetry(ir: irsdk.IRSDK, mqtt: MQTT):
+def process(ir: irsdk.IRSDK, mqtt: MQTT):
     while ir.is_connected:
         ir.freeze_var_buffer_latest()
         session = Session(
@@ -178,11 +186,21 @@ def send_telemetry(ir: irsdk.IRSDK, mqtt: MQTT):
         car = Car(ir['RPM'], ir['Speed'], ir['FuelLevelPct'], ir['Gear'])
         track = Track(ir['WeekendInfo']['TrackDisplayName'], ir['WeekendInfo']['TrackLatitude'],
                       ir['WeekendInfo']['TrackLongitude'])
-        mqtt.publish("car", car.state())
-        mqtt.publish("track", track.state())
-        mqtt.publish("car/attributes", car.attributes())
-        mqtt.publish("track/attributes", track.attributes())
+
+        send_telemetry(mqtt, session, car, track)
         time.sleep(1)
+    send_telemetry(mqtt, Session(), Car(),  Track())
+
+
+def send_telemetry(mqtt: MQTT, session: Session, car: Car, track: Track):
+    for sensor, value in car.sensors().items():
+        mqtt.publish(f"car/{sensor}", value)
+
+    for sensor, value in session.sensors().items():
+        mqtt.publish(f"session/{sensor}", value)
+
+    mqtt.publish("track", track.state())
+    mqtt.publish("track/attributes", track.attributes())
 
 
 def main() -> None:
@@ -196,14 +214,16 @@ def main() -> None:
     logger.info("Iracing up and running")
 
     try:
-        send_telemetry(ir, mqtt)
+        process(ir, mqtt)
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt")
+        send_telemetry(mqtt, Session(), Car(),  Track())
         mqtt.will()
         mqtt.client.loop_stop()
         mqtt.client.disconnect()
 
 
 if __name__ == "__main__":
+
     logger = setup_logger()
     main()
