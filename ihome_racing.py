@@ -34,11 +34,15 @@ class Session:
     session_laps_total: int = None
     lap_completed: int = None
     player_car_class_position: int = None
+    track_name: str = None
 
     def sensors(self) -> dict:
-        data = {'event_type': self.event_type, 'current_session_type': self.current_session_type,
-                "session_laps_total": self.session_laps_total, "lap_completed": self.lap_completed,
-                "player_car_class_position": self.player_car_class_position
+        data = {'event_type': self.event_type,
+                'current_session_type': self.current_session_type,
+                "session_laps_total": self.session_laps_total,
+                "lap_completed": self.lap_completed,
+                "player_car_class_position": self.player_car_class_position,
+                "track_name": self.track_name
                 }
         return data
 
@@ -46,25 +50,20 @@ class Session:
 class Track:
     """Class for session data"""
 
-    def __init__(self, name="Bikuben 7", latitude=None, longitude=None):
+    def __init__(self, temperature=0.0, latitude=None, longitude=None):
         config = get_config()
-        self.name: str = name
+        self.temperature: float = temperature
         self.latitude: str = config["home"]["lat"] if latitude is None else latitude
         self.longitude: str = config["home"]["lon"]if longitude is None else longitude
 
     def state(self) -> str:
-        data = {'name': self.name}
+        data = {'temperature': self.temperature}
         return json.dumps(data)
 
     def attributes(self) -> str:
         data = {'latitude': self.latitude.replace('m', '').strip(),
                 'longitude': self.longitude.replace('m', '').strip()}
         return json.dumps(data)
-
-    # def reset(self) -> None:
-    #     config = get_config()
-    #     self.latitude = config["home"]["lat"]
-    #     self.longitude = config["home"]["lon"]
 
 
 class MQTT:
@@ -155,7 +154,7 @@ def setup_logger():
                 "class": "logging.FileHandler",
                 "formatter": "standard",
                 "level": "DEBUG",
-                "filename": "ihome_racing.log",
+                "filename": "C:/01_Dev/01_Python/iRacing/iHomeRacing/ihome_racing.log",
                 "mode": "w",
             },
         },
@@ -174,33 +173,45 @@ def setup_logger():
 
 def iracing_running(ir: irsdk.IRSDK) -> bool:
     is_startup = ir.startup()
-    logger.debug("Waiting for iRacing to start up")
     return is_startup and ir.is_initialized and ir.is_connected
 
 
 def process(ir: irsdk.IRSDK, mqtt: MQTT):
-    while ir.is_connected:
-        ir.freeze_var_buffer_latest()
-        session = Session(
-            ir['WeekendInfo']['EventType'], ir['SessionInfo']['Sessions'][0]['SessionType'], ir['SessionLapsTotal'], ir['LapCompleted'], ir['PlayerCarClassPosition'])
-        car = Car(ir['RPM'], ir['Speed'], ir['FuelLevelPct'], ir['Gear'])
-        track = Track(ir['WeekendInfo']['TrackDisplayName'], ir['WeekendInfo']['TrackLatitude'],
-                      ir['WeekendInfo']['TrackLongitude'])
+    while True:
+        if iracing_running(ir):
+            ir.freeze_var_buffer_latest()
+            session = Session(
+                ir['WeekendInfo']['EventType'],
+                ir['SessionInfo']['Sessions'][0]['SessionType'],
+                ir['SessionLapsTotal'],
+                ir['LapCompleted'],
+                ir['PlayerCarClassPosition'],
+                ir['WeekendInfo']['TrackDisplayName'])
 
-        send_telemetry(mqtt, session, car, track)
-        time.sleep(1)
-    send_telemetry(mqtt, Session(), Car(),  Track())
+            car = Car(ir['RPM'], ir['Speed'], ir['FuelLevelPct'], ir['Gear'])
+
+            track = Track(ir['WeekendInfo']['TrackAirTemp'],
+                          ir['WeekendInfo']['TrackLatitude'],
+                          ir['WeekendInfo']['TrackLongitude']
+                          )
+
+            send_telemetry(mqtt, session, car, track)
+            time.sleep(1)
+        else:
+            send_telemetry(mqtt, Session(), Car(),  Track())
+            logger.debug("Waiting for iRacing to start up")
+            time.sleep(1)
 
 
 def send_telemetry(mqtt: MQTT, session: Session, car: Car, track: Track):
+    mqtt.publish("track/attributes", track.attributes())
+
     for sensor, value in car.sensors().items():
         mqtt.publish(f"car/{sensor}", value)
 
     for sensor, value in session.sensors().items():
         mqtt.publish(f"session/{sensor}", value)
-
     mqtt.publish("track", track.state())
-    mqtt.publish("track/attributes", track.attributes())
 
 
 def main() -> None:
@@ -210,6 +221,7 @@ def main() -> None:
     mqtt = MQTT(config)
 
     while not iracing_running(ir):
+        logger.debug("Waiting for iRacing to start up")
         time.sleep(1)
     logger.info("Iracing up and running")
 
