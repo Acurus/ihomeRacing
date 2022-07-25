@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 import logging.config
 import sys
 from dataclasses import dataclass
@@ -135,6 +136,7 @@ def get_config() -> dict:
 
 
 def setup_logger():
+    date_string = datetime.now().strftime("%Y-%m-%dT%H%M")
     DEFAULT_LOGGING = {
         "version": 1,
         "formatters": {
@@ -154,7 +156,7 @@ def setup_logger():
                 "class": "logging.FileHandler",
                 "formatter": "standard",
                 "level": "DEBUG",
-                "filename": "C:/01_Dev/01_Python/iRacing/iHomeRacing/ihome_racing.log",
+                "filename": f"C:/01_Dev/01_Python/iRacing/iHomeRacing/ihome_racing_{date_string}.log",
                 "mode": "w",
             },
         },
