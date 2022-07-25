@@ -184,7 +184,7 @@ def process(ir: irsdk.IRSDK, mqtt: MQTT):
             ir.freeze_var_buffer_latest()
             session = Session(
                 ir['WeekendInfo']['EventType'],
-                ir['SessionInfo']['Sessions'][0]['SessionType'],
+                ir['SessionInfo']['Sessions'][-1]['SessionType'],
                 ir['SessionLapsTotal'],
                 ir['LapCompleted'],
                 ir['PlayerCarClassPosition'],
