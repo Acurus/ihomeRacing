@@ -1,14 +1,19 @@
+import json
 import logging
-from datetime import datetime
 import logging.config
+import math
 import sys
-from dataclasses import dataclass
 import time
+from dataclasses import dataclass
+from datetime import datetime
+from math import ceil
+from pathlib import Path
+
 import irsdk
 import paho.mqtt.client as mqtt
 import yaml
-from pathlib import Path
-import json
+
+# https://github.com/kutu/pyirsdk/blob/master/vars.txt
 
 
 @dataclass
@@ -33,14 +38,18 @@ class Session:
     event_type: str = None
     current_session_type: str = None
     session_laps_total: int = None
+    session_time_remain: int = None
+    lap_best_lap_time: int = None
     lap_completed: int = None
     player_car_class_position: int = None
     track_name: str = None
 
     def sensors(self) -> dict:
         data = {'event_type': self.event_type,
+                'session_laps_total': self.session_laps_total,
+                'session_time_remain': time.strftime("%H:%M:%S", time.gmtime(self.session_time_remain)),
+                'lap_best_lap_time': self.lap_best_lap_time,
                 'current_session_type': self.current_session_type,
-                "session_laps_total": self.session_laps_total,
                 "lap_completed": self.lap_completed,
                 "player_car_class_position": self.player_car_class_position,
                 "track_name": self.track_name
@@ -184,8 +193,10 @@ def process(ir: irsdk.IRSDK, mqtt: MQTT):
             ir.freeze_var_buffer_latest()
             session = Session(
                 ir['WeekendInfo']['EventType'],
-                ir['SessionInfo']['Sessions'][-1]['SessionType'],
+                ir['SessionInfo']['Sessions'][ir['SessionNum']]['SessionType'],
                 ir['SessionLapsTotal'],
+                ir['SessionTimeRemain'],
+                ir['LapBestLapTime'],
                 ir['LapCompleted'],
                 ir['PlayerCarClassPosition'],
                 ir['WeekendInfo']['TrackDisplayName'])
