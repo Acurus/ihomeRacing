@@ -55,6 +55,7 @@ class Session:
         try:
             sessionSateMap[self.session_state]
         except KeyError:
+            logger.warning(f"{self.session_state} not in map")
             sessionSateMap = self.session_state
 
     def sensors(self) -> dict:
