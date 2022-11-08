@@ -1,0 +1,52 @@
+TrackName - skidpad
+TrackID - 143
+TrackLength - 0.72 km
+TrackLengthOfficial - 1.61 km
+TrackDisplayName - Centripetal Circuit
+TrackDisplayShortName - Centripetal Circuit
+TrackConfigName - None
+TrackCity - Parts Unknown
+TrackCountry - USA
+TrackAltitude - 302.00 m
+TrackLatitude - 42.596953 m
+TrackLongitude - -83.684817 m
+TrackNorthOffset - 1.5708 rad
+TrackNumTurns - 1
+TrackPitSpeedLimit - 72.00 kph
+TrackType - mile oval
+TrackDirection - left
+TrackWeatherType - Specified / Dynamic Sky
+TrackSkies - Partly Cloudy
+TrackSurfaceTemp - 39.81 C
+TrackAirTemp - 25.56 C
+TrackAirPressure - 28.86 Hg
+TrackWindVel - 0.89 m/s
+TrackWindDir - 6.28 rad
+TrackRelativeHumidity - 55 %
+TrackFogLevel - 0 %
+TrackCleanup - 0
+TrackDynamicTrack - 0
+TrackVersion - 2022.05.24.03
+SeriesID - 0
+SeasonID - 0
+SessionID - 0
+SubSessionID - 0
+LeagueID - 0
+Official - 0
+RaceWeek - 0
+EventType - Test
+Category - Oval
+SimMode - full
+TeamRacing - 0
+MinDrivers - 0
+MaxDrivers - 0
+DCRuleSet - None
+QualifierMustStartRace - 0
+NumCarClasses - 1
+NumCarTypes - 1
+HeatRacing - 0
+BuildType - Release
+BuildTarget - Members
+BuildVersion - 2022.10.25.02
+WeekendOptions - {'NumStarters': 0, 'StartingGrid': 'single file', 'QualifyScoring': 'best lap', 'CourseCautions': False, 'StandingStart': 0, 'ShortParadeLap': 0, 'Restarts': 'single file', 'WeatherType': 'Specified / Dynamic Sky', 'Skies': 'Partly Cloudy', 'WindDirection': 'N', 'WindSpeed': '3.22 km/h', 'WeatherTemp': '25.56 C', 'RelativeHumidity': '55 %', 'FogLevel': '0 %', 'TimeOfDay': '2:16 pm', 'Date': '2018-05-15', 'EarthRotationSpeedupFactor': 1, 'Unofficial': 0, 'CommercialMode': 'consumer', 'NightMode': 'variable', 'IsFixedSetup': 0, 'StrictLapsChecking': 'default', 'HasOpenRegistration': 0, 'HardcoreLevel': 1, 'NumJokerLaps': 0, 'IncidentLimit': 'unlimited', 'FastRepairsLimit': 'unlimited', 'GreenWhiteCheckeredLimit': 0}
+TelemetryOptions - {'TelemetryDiskFile': ''}

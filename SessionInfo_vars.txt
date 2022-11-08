@@ -1,0 +1,19 @@
+SessionNum - 0
+SessionLaps - unlimited
+SessionTime - unlimited
+SessionNumLapsToAvg - 0
+SessionType - Offline Testing
+SessionTrackRubberState - clean
+SessionName - TESTING
+SessionSubType - None
+SessionSkipped - 0
+SessionRunGroupsUsed - 0
+SessionEnforceTireCompoundChange - 0
+ResultsPositions - None
+ResultsFastestLap - [{'CarIdx': 255, 'FastestLap': 0, 'FastestTime': -1.0}]
+ResultsAverageLapTime - -1.0
+ResultsNumCautionFlags - 0
+ResultsNumCautionLaps - 0
+ResultsNumLeadChanges - 0
+ResultsLapsComplete - -1
+ResultsOfficial - 0

@@ -1,3 +1,4 @@
+from enum import Enum
 import json
 import logging
 import logging.config
@@ -14,6 +15,9 @@ import paho.mqtt.client as mqtt
 import yaml
 
 # https://github.com/kutu/pyirsdk/blob/master/vars.txt
+
+sessionSateMap = {0: "Venter", 1: "Gjør seg klar", 2: "Oppvarming",
+                  3: "Kjører til start", 4: "Racing", 5: "I mål", 6: "Cooldown"}
 
 
 @dataclass
@@ -43,17 +47,28 @@ class Session:
     lap_completed: int = None
     player_car_class_position: int = None
     track_name: str = None
+    car_name: str = None
+    session_state: str = None
+
+    @property
+    def session_state_mapped(self):
+        try:
+            sessionSateMap[self.session_state]
+        except KeyError:
+            sessionSateMap = self.session_state
 
     def sensors(self) -> dict:
         data = {'event_type': self.event_type,
                 'session_laps_total': self.session_laps_total,
                 'session_time_remain': time.strftime("%H:%M:%S", time.gmtime(self.session_time_remain)),
+                'session_state': self.session_state,
                 'lap_best_lap_time': self.lap_best_lap_time,
                 'current_session_type': self.current_session_type,
                 "lap_completed": self.lap_completed,
                 "player_car_class_position": self.player_car_class_position,
-                "track_name": self.track_name
-                }
+                "track_name": self.track_name,
+                "car_name": self.car_name,
+                "session_state": self.session_state_mapped}
         return data
 
 
@@ -199,9 +214,12 @@ def process(ir: irsdk.IRSDK, mqtt: MQTT):
                 ir['LapBestLapTime'],
                 ir['LapCompleted'],
                 ir['PlayerCarClassPosition'],
-                ir['WeekendInfo']['TrackDisplayName'])
+                ir['WeekendInfo']['TrackDisplayName'],
+                ir['DriverInfo']['Drivers'][ir['PlayerCarIdx']]['CarScreenName'],
+                ir['SessionState'])
 
-            car = Car(ir['RPM'], ir['Speed'], ir['FuelLevelPct'], ir['Gear'])
+            car = Car(ir['RPM'], ir['Speed'], ir['FuelLevelPct'],
+                      ir['Gear'])
 
             track = Track(ir['WeekendInfo']['TrackAirTemp'],
                           ir['WeekendInfo']['TrackLatitude'],
