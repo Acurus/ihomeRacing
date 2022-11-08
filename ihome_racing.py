@@ -52,11 +52,12 @@ class Session:
 
     @property
     def session_state_mapped(self):
-        try:
-            sessionSateMap[self.session_state]
-        except KeyError:
-            logger.warning(f"{self.session_state} not in map")
-            sessionSateMap = self.session_state
+        if self.session_state:
+            try:
+                return sessionSateMap[self.session_state]
+            except KeyError:
+                logger.warning(f"{self.session_state} not in map")
+                return self.session_state
 
     def sensors(self) -> dict:
         data = {'event_type': self.event_type,
