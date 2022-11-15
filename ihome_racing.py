@@ -208,27 +208,30 @@ def process(ir: irsdk.IRSDK, mqtt: MQTT):
     while True:
         if iracing_running(ir):
             ir.freeze_var_buffer_latest()
-            session = Session(
-                ir['WeekendInfo']['EventType'],
-                ir['SessionInfo']['Sessions'][ir['SessionNum']]['SessionType'],
-                ir['SessionLapsTotal'],
-                ir['SessionTimeRemain'],
-                ir['LapBestLapTime'],
-                ir['LapCompleted'],
-                ir['PlayerCarClassPosition'],
-                ir['WeekendInfo']['TrackDisplayName'],
-                ir['DriverInfo']['Drivers'][ir['PlayerCarIdx']]['CarScreenName'],
-                ir['SessionState'])
+            try:
+                session = Session(
+                    ir['WeekendInfo']['EventType'],
+                    ir['SessionInfo']['Sessions'][ir['SessionNum']]['SessionType'],
+                    ir['SessionLapsTotal'],
+                    ir['SessionTimeRemain'],
+                    ir['LapBestLapTime'],
+                    ir['LapCompleted'],
+                    ir['PlayerCarClassPosition'],
+                    ir['WeekendInfo']['TrackDisplayName'],
+                    ir['DriverInfo']['Drivers'][ir['PlayerCarIdx']]['CarScreenName'],
+                    ir['SessionState'])
 
-            car = Car(ir['RPM'], ir['Speed'], ir['FuelLevelPct'],
-                      ir['Gear'])
+                car = Car(ir['RPM'], ir['Speed'], ir['FuelLevelPct'],
+                          ir['Gear'])
 
-            track = Track(ir['WeekendInfo']['TrackAirTemp'],
-                          ir['WeekendInfo']['TrackLatitude'],
-                          ir['WeekendInfo']['TrackLongitude']
-                          )
+                track = Track(ir['WeekendInfo']['TrackAirTemp'],
+                              ir['WeekendInfo']['TrackLatitude'],
+                              ir['WeekendInfo']['TrackLongitude']
+                              )
 
-            send_telemetry(mqtt, session, car, track)
+                send_telemetry(mqtt, session, car, track)
+            except Exception as e:
+                logger.error(e)
             time.sleep(1)
         else:
             send_telemetry(mqtt, Session(), Car(),  Track())
