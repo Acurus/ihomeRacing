@@ -182,8 +182,8 @@ def setup_logger():
                 "class": "logging.FileHandler",
                 "formatter": "standard",
                 "level": "DEBUG",
-                "filename": f"C:/01_Dev/01_Python/iRacing/iHomeRacing/ihome_racing_{date_string}.log",
-                "mode": "w",
+                "filename": f"C:/01_Dev/01_Python/iRacing/iHomeRacing/ihome_racing.log",
+                "mode": "a",
             },
         },
         "loggers": {
